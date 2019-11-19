@@ -14,6 +14,7 @@ CPU_DEVICE = torch.device("cpu")
 class ConvNet(nn.Module):
     def __init__(self):
         super().__init__()
+        self.dropout = nn.Dropout(0.1)
         self.conv1 = nn.Conv2d(1, 6, 3, stride=1, padding=1)
         self.pool = nn.MaxPool2d(2)
         self.conv2 = nn.Conv2d(6, 12, 3, stride=1, padding=1)
@@ -22,23 +23,27 @@ class ConvNet(nn.Module):
         self.fc3 = nn.Linear(32, 10)
 
     def forward(self, x):
-        global p
         x = F.relu(self.conv1(x))  # output 6x28x28
         x = self.pool(x)  # output 6x14x14
         x = F.relu(self.conv2(x))  # output 12x14x14
         x = self.pool(x)  # output 12x7x7
-
         x = x.view(-1, 12 * 7 * 7)
 
         x = F.relu(self.fc1(x))
+        x = self.dropout(x)
         x = F.relu(self.fc2(x))
         x = F.softmax(self.fc3(x), dim=1)
         return x
 
 
 def get_dataloaders() -> Tuple[torch.utils.data.DataLoader, ...]:
-    # TODO: add docstring
-    # TODO: add tests
+    """
+    Get dataloaders with MNIST train, test, and cross validation data sets.
+
+    Returns:
+        Train, test, and cross-validation torch.utils.data.DataLoader`s.
+
+    """
 
     transform = transforms.Compose(
         [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
@@ -48,7 +53,6 @@ def get_dataloaders() -> Tuple[torch.utils.data.DataLoader, ...]:
         "mnist_train", train=True, download=True, transform=transform
     )
 
-    train_dataset, test_dataset, cv_dataset = split_dataset(dataset)
     splitted_datasets = split_dataset(dataset)
 
     dataloaders = [
@@ -110,7 +114,7 @@ def training_loop(
     # TODO: add more metrics (cv test, cv loss, per class error rate)
     step = 0
     for epoch in range(EP):  # loop over the dataset multiple times
-        print(epoch)
+        print(epoch + 1)
         for i, data in enumerate(trainloader, 0):
             step += 1
             inputs, labels = data[0].to(DEVICE), data[1].to(DEVICE)
@@ -139,12 +143,12 @@ if __name__ == "__main__":
     # TODO: add data augmentation
     # TODO: add autoencoder to reduce dimension (rather different project)
 
-    LR = 0.01
+    LR = 0.003
     EP = 2
 
     # Initialize tensorboard writer
     dev_str = str(DEVICE).split(":")[0]
-    tensorboard_suffix = f"_dev{dev_str}_lr{LR}_ep{EP}"
+    tensorboard_suffix = f"_dev{dev_str}_lr{LR}_ep{EP}_dropout"
     writer = SummaryWriter(log_dir=None, comment=tensorboard_suffix)
 
     trainloader, testloader, cvloader = get_dataloaders()
