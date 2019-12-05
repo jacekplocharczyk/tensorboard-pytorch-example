@@ -110,3 +110,4 @@ mnist_train
 .vscode
 Untitled*
 data
+tensorboard_logs

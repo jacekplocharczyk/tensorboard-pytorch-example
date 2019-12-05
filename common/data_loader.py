@@ -5,9 +5,6 @@ from torchvision import datasets, transforms
 
 from common import config
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-CPU_DEVICE = torch.device("cpu")
-
 
 def get_dataloaders(
     batch_size: int = config.BATCH_SIZE
