@@ -23,7 +23,6 @@ def main():
     net = training_loop(
         net,
         trainloader,
-        testloader,
         cvloader,
         optimizer=optimizer,
         criterion=criterion,

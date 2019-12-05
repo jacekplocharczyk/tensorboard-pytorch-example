@@ -1,8 +1,7 @@
 import pytest
 from torchvision import datasets, transforms
 
-from common import data_loader
-from common import config
+from common import config, data_loader
 
 
 @pytest.fixture

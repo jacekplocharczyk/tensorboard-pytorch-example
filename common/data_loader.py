@@ -12,12 +12,11 @@ def get_dataloaders(
     """
     Get dataloaders with MNIST train, test, and cross validation data sets.
 
-    Args:
-        batch_size: int used to set batch size
+    Keyword Arguments:
+        batch_size {int} -- (default: {config.BATCH_SIZE})
 
     Returns:
-        Train, test, and cross-validation torch.utils.data.DataLoader`s.
-
+        Tuple[torch.utils.data.DataLoader, ...] -- Train, test, and cross-validation
     """
 
     transform = transforms.Compose(
@@ -47,19 +46,22 @@ def split_dataset(
     """
     Split data set into train, test, and cross-validation datasets
 
-    Args:
-        dataset: torch.utils.data.Dataset containing all training data
-            (features and labels)
-        train_ratio: Training data ratio to all data.
-        test_ratio: Test data ratio to all data.
-        cv_ratio: Cross-Validation data ratio to all data.
+    Arguments:
+        dataset {torch.utils.data.Dataset} -- all training data (features and labels)
+
+    Keyword Arguments:
+        train_ratio {float}
+            -- Training data ratio to all data (default: {config.TRAIN_RATIO})
+        test_ratio {float} -- Test data ratio to all data (default: {config.TEST_RATIO})
+        cv_ratio {float} -- Cross-Validation data (default: {config.CV_RATIO})
 
     Returns:
-        Train, test, and cross-validation torch.utils.data.Dataset's.
+        Tuple[torch.utils.data.Dataset, ...] -- train, test, and cross-validation
 
     Raises:
         AssertionError: When ratios are wrong.
     """
+
     assert round(train_ratio + test_ratio + cv_ratio) == 1.0, "Ratios must sum to 1."
     assert (
         round(abs(train_ratio) + abs(test_ratio) + abs(cv_ratio)) == 1.0

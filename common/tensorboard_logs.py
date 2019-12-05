@@ -2,8 +2,8 @@ import datetime
 from pathlib import Path
 
 import torch
-from torch.utils.tensorboard import SummaryWriter
 import torchvision
+from torch.utils.tensorboard import SummaryWriter
 
 from common.config import TENSORBOARD_DIR
 
@@ -18,15 +18,16 @@ class TensorboardWriter(SummaryWriter):
         """
         Get tensorboard log dir based on params
 
-        Args:
-            device: torch.Device gpu or cpu device (just to distingush cpu from gpu)
-            lr: float learning rate
-            ep: int epochs number
-            comment: str user comment
+        Arguments:
+            device {torch.device} -- GPU or CPU device
+            lr {float} -- learning rate
+            ep {int} -- epochs number
+            comment {str} -- user comment
 
         Returns:
-            Path with log dir
+            Path -- log dir
         """
+
         dev_str = str(device).split(":")[0]
         tensorboard_suffix = f"_dev{dev_str}_lr{lr}_ep{ep}" + comment
         current_time = datetime.datetime.now().strftime("%b%d_%H-%M-%S")
@@ -39,10 +40,11 @@ class TensorboardWriter(SummaryWriter):
         """
         Add sample image from the dataloader.
 
-        Args:
-            dataloader: torch.utils.data.DataLoader with image data
+        Arguments:
+            dataloader {torch.utils.data.DataLoader} -- image data
 
-            description: str with user description
+        Keyword Arguments:
+            description {str} -- user description (default: {"images"})
         """
         images, _ = next(iter(dataloader))
 
