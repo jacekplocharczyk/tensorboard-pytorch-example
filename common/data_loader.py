@@ -3,13 +3,20 @@ from typing import Tuple
 import torch
 from torchvision import datasets, transforms
 
+from common import config
+
 DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 CPU_DEVICE = torch.device("cpu")
 
 
-def get_dataloaders() -> Tuple[torch.utils.data.DataLoader, ...]:
+def get_dataloaders(
+    batch_size: int = config.BATCH_SIZE
+) -> Tuple[torch.utils.data.DataLoader, ...]:
     """
     Get dataloaders with MNIST train, test, and cross validation data sets.
+
+    Args:
+        batch_size: int used to set batch size
 
     Returns:
         Train, test, and cross-validation torch.utils.data.DataLoader`s.
@@ -21,13 +28,13 @@ def get_dataloaders() -> Tuple[torch.utils.data.DataLoader, ...]:
     )
 
     dataset = datasets.MNIST(
-        "mnist_train", train=True, download=True, transform=transform
+        config.DATA_DIR / "mnist_train", train=True, download=True, transform=transform
     )
 
     splitted_datasets = split_dataset(dataset)
 
     dataloaders = [
-        torch.utils.data.DataLoader(data, batch_size=64, shuffle=True)
+        torch.utils.data.DataLoader(data, batch_size=batch_size, shuffle=True)
         for data in splitted_datasets
     ]
 
@@ -36,9 +43,9 @@ def get_dataloaders() -> Tuple[torch.utils.data.DataLoader, ...]:
 
 def split_dataset(
     dataset: torch.utils.data.Dataset,
-    train_ratio: float = 0.7,
-    test_ratio: float = 0.15,
-    cv_ratio: float = 0.15,
+    train_ratio: float = config.TRAIN_RATIO,
+    test_ratio: float = config.TEST_RATIO,
+    cv_ratio: float = config.CV_RATIO,
 ) -> Tuple[torch.utils.data.Dataset, ...]:
     """
     Split data set into train, test, and cross-validation datasets
@@ -56,11 +63,9 @@ def split_dataset(
     Raises:
         AssertionError: When ratios are wrong.
     """
-    # TODO: add tests
-
-    assert train_ratio + test_ratio + cv_ratio == 1.0, "Ratios must sum to 1."
+    assert round(train_ratio + test_ratio + cv_ratio) == 1.0, "Ratios must sum to 1."
     assert (
-        abs(train_ratio) + abs(test_ratio) + abs(cv_ratio) == 1.0
+        round(abs(train_ratio) + abs(test_ratio) + abs(cv_ratio)) == 1.0
     ), "Ratios must be positive."
 
     train_size = int(train_ratio * len(dataset))
