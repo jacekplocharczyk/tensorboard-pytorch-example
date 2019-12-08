@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from common import config, data_loader, tensorboard_logs
 from common.default_convnet import ConvNet
-from common.training_loop import training_loop
+from common.training_loop import Trainer
 
 
 def main():
@@ -19,17 +19,9 @@ def main():
     net = ConvNet().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
+    trainer = Trainer(trainloader, cvloader, criterion, writer, epochs, device)
 
-    net = training_loop(
-        net,
-        trainloader,
-        cvloader,
-        optimizer=optimizer,
-        criterion=criterion,
-        writer=writer,
-        epochs=epochs,
-        device=device,
-    )
+    net = trainer(net, optimizer)
 
     writer.close()
 

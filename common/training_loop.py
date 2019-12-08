@@ -1,114 +1,162 @@
+from typing import Tuple
+
 import torch
+from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
 from common.config import CPU_DEVICE, DEFAULT_EPOCHS_COUNT, DEVICE
 
 
-def training_loop(
-    model: torch.nn,
-    trainloader: torch.utils.data.DataLoader,
-    cvloader: torch.utils.data.DataLoader,
-    optimizer: torch.optim.Optimizer,
-    criterion: torch.nn.modules.loss._Loss,
-    writer: SummaryWriter,
-    epochs: int = DEFAULT_EPOCHS_COUNT,
-    device: torch.device = DEVICE,
-) -> torch.nn:
-    """
-    Learn ML model using trainloader and test using cross-validation loader.
+class Trainer:
+    def __init__(
+        self,
+        trainloader: torch.utils.data.DataLoader,
+        cvloader: torch.utils.data.DataLoader,
+        criterion: torch.nn.modules.loss._Loss,
+        writer: SummaryWriter,
+        epochs: int = DEFAULT_EPOCHS_COUNT,
+        device: torch.device = DEVICE,
+        train_stats_frequency: int = 10,
+    ) -> None:
+        """
+        Basic class used for training.
 
-    Arguments:
-        model {torch.nn} -- model to lear
-        trainloader {torch.utils.data.DataLoader} -- training data
-        cvloader {torch.utils.data.DataLoader} -- cross-validation data
-        optimizer {torch.optim.Optimizer}
-        criterion {torch.nn.modules.loss._Loss}
-        writer {SummaryWriter}
+        Arguments:
+            trainloader {torch.utils.data.DataLoader} -- training data
+            cvloader {torch.utils.data.DataLoader} -- cross-validation data
+            criterion {torch.nn.modules.loss._Loss}
+            writer {SummaryWriter}
 
-    Keyword Arguments:
-        epochs {int} -- number of epochs to learn (default: {DEFAULT_EPOCHS_COUNT})
-        device {torch.device} -- GPU or CPU device (default: {DEVICE})
+        Keyword Arguments:
+            epochs {int} -- number of epochs to learn (default: {DEFAULT_EPOCHS_COUNT})
+            device {torch.device} -- GPU or CPU device (default: {DEVICE})
+            train_stats_frequency {int} -- tensorboard train data update frequency
+                (default: {10})
+        """
+        self.trainloader = trainloader
+        self.cvloader = cvloader
+        self.criterion = criterion
+        self.writer = writer
+        self.epochs = epochs
+        self.device = device
+        self.train_stats_frequency = train_stats_frequency
+        self.step = 0
 
-    Returns:
-        torch.nn -- trained model
-    """
+    def __call__(self, *args, **kwargs):
+        return self._training_loop(*args, **kwargs)
 
-    # TODO: add tests?
-    # TODO: add more metrics (cv test, cv loss, per class error rate)
-    # TODO: Change this to the class?
+    def _training_loop(
+        self, model: nn.Module, optimizer: torch.optim.Optimizer
+    ) -> nn.Module:
+        """
+        Update the model by applying optimizer steps.
+        Perform {self.epochs} number of iterations over whole dataset.
 
-    step = 0
-    for epoch in range(epochs):  # loop over the dataset multiple times
-        print(epoch + 1)  # TODO: Use logger instead
-        for i, data in enumerate(trainloader, 0):
-            step += 1
-            inputs, labels = data[0].to(device), data[1].to(device)
+        Arguments:
+            model {torch.nn} -- model to learn
+            optimizer {torch.optim.Optimizer}
 
-            optimizer.zero_grad()
+        Returns:
+            nn.Module -- trained model
+        """
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+        for epoch in range(self.epochs):
+            print(epoch + 1)  # TODO: Use logger instead
+            for batch in self.trainloader:
+                model = self._optimizer_step(model, optimizer, batch)
 
-            writer.add_scalar("Loss/train", loss.to(CPU_DEVICE), step)
-            writer.add_scalar(
-                "Acc/train",
-                ((outputs.argmax(1) == labels).sum() / float(len(labels))).to(
-                    CPU_DEVICE
-                ),
-                step,
-            )
+            self.update_cv_stats(model)
 
-            loss.backward()
-            optimizer.step()
-        eval_cv_stats(model, step, trainloader, criterion, writer, device),
+        return model
 
-    return model
+    def _optimizer_step(
+        self,
+        model: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        batch: Tuple[torch.tensor, torch.tensor],
+    ) -> nn.Module:
+        """
+        Perform one optimizer step on the batch.
 
+        Arguments:
+            model {torch.nn} -- model to learn
+            optimizer {torch.optim.Optimizer}
+            batch {Tuple[torch.tensor, torch.tensor]} -- batch with features and targets
 
-def eval_cv_stats(
-    model: torch.nn,
-    step: int,
-    cvloader: torch.utils.data.DataLoader,
-    criterion: torch.nn.modules.loss._Loss,
-    writer: SummaryWriter,
-    device: torch.device = DEVICE,
-):
-    """
-    Save cross-validation statistics to the tensorboard logs.
+        Returns:
+            nn.Module -- updated model
+        """
+        self.step += 1
 
-    Arguments:
-        model {torch.nn} -- model to lear
-        step {int} -- number of optimizer steps
-        cvloader {torch.utils.data.DataLoader} -- cross-validation data
-        criterion {torch.nn.modules.loss._Loss}
-        writer {SummaryWriter}
+        inputs, targets = batch[0].to(self.device), batch[1].to(self.device)
 
-    Keyword Arguments:
-        device {torch.device} -- GPU or CPU device (default: {DEVICE})
-    """
-    cv_acc = torch.tensor(0.0).to(device)
-    cv_loss = torch.tensor(0.0).to(device)
-    samples_no = float(len(cvloader.dataset))
+        optimizer.zero_grad()
+        outputs = model(inputs)
+        loss = self.criterion(outputs, targets)
 
-    with torch.no_grad():
-        model = model.eval()
+        loss.backward()
+        optimizer.step()
 
-        for data in cvloader:
-            batch_size = len(data[0])  # last sample can have different items
+        if self.step % self.train_stats_frequency == 0:
+            self.update_train_stats(loss, outputs, targets)
 
-            inputs, labels = data[0].to(device), data[1].to(device)
-            outputs = model(inputs)
+        return model
 
-            batch_acc = (outputs.argmax(1) == labels).sum()
-            batch_loss = criterion(outputs, labels) * batch_size
+    def update_train_stats(
+        self, loss: torch.tensor, outputs: torch.tensor, targets: torch.tensor
+    ) -> None:
+        """[summary]
 
-            cv_acc += batch_acc
-            cv_loss += batch_loss
+        Arguments:
+            loss {torch.tensor}
+            outputs {torch.tensor}
+            targets {torch.tensor}
 
-        cv_acc = (cv_acc / samples_no).to(CPU_DEVICE)
-        cv_loss = (cv_loss / samples_no).to(CPU_DEVICE)
+        """
+        acc = (outputs.argmax(1) == targets).sum() / float(targets.shape[0])
+        self.writer.add_scalar("Loss/train", loss.to(CPU_DEVICE), self.step)
+        self.writer.add_scalar("Acc/train", acc.to(CPU_DEVICE), self.step)
 
-        writer.add_scalar("Loss/cv", cv_loss, step)
-        writer.add_scalar("Acc/cv", cv_acc, step)
+    def update_cv_stats(self, model: torch.nn) -> None:
+        """
+        Update cross-validation statistics in the tensorboard logs.
+
+        Arguments:
+            model {torch.nn} -- model to learn
+
+        """
+        cv_acc, cv_loss = self._get_cv_stats(model)
+        self.writer.add_scalar("Loss/cv", cv_loss, self.step)
+        self.writer.add_scalar("Acc/cv", cv_acc, self.step)
+
+    def _get_cv_stats(self, model: torch.nn) -> Tuple[torch.tensor, torch.tensor]:
+        """
+        Collect CV data accuracy and loss.
+
+        Arguments:
+            model {torch.nn} -- model to learn
+
+        Returns:
+            Tuple[torch.tensor, torch.tensor] -- accuracy and loss
+        """
+        cv_acc = torch.tensor(0.0).to(self.device)
+        cv_loss = torch.tensor(0.0).to(self.device)
+        samples_no = float(len(self.cvloader.dataset))
+
+        with torch.no_grad():
+            model = model.eval()
+
+            for inputs, targets in self.cvloader:
+                batch_size = inputs.shape[0]  # last sample can have different items
+
+                targets = targets.to(self.device)
+                outputs = model(inputs.to(self.device))
+
+                cv_acc += (outputs.argmax(1) == targets).sum()
+                cv_loss += self.criterion(outputs, targets) * batch_size
+
+            cv_acc = (cv_acc / samples_no).to(CPU_DEVICE)
+            cv_loss = (cv_loss / samples_no).to(CPU_DEVICE)
 
         model = model.train()
+        return cv_acc, cv_loss
