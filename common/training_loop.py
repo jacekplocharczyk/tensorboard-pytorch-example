@@ -60,4 +60,55 @@ def training_loop(
 
             loss.backward()
             optimizer.step()
+        eval_cv_stats(model, step, trainloader, criterion, writer, device),
+
     return model
+
+
+def eval_cv_stats(
+    model: torch.nn,
+    step: int,
+    cvloader: torch.utils.data.DataLoader,
+    criterion: torch.nn.modules.loss._Loss,
+    writer: SummaryWriter,
+    device: torch.device = DEVICE,
+):
+    """
+    Save cross-validation statistics to the tensorboard logs.
+
+    Arguments:
+        model {torch.nn} -- model to lear
+        step {int} -- number of optimizer steps
+        cvloader {torch.utils.data.DataLoader} -- cross-validation data
+        criterion {torch.nn.modules.loss._Loss}
+        writer {SummaryWriter}
+
+    Keyword Arguments:
+        device {torch.device} -- GPU or CPU device (default: {DEVICE})
+    """
+    cv_acc = torch.tensor(0.0).to(device)
+    cv_loss = torch.tensor(0.0).to(device)
+    samples_no = float(len(cvloader.dataset))
+
+    with torch.no_grad():
+        model = model.eval()
+
+        for data in cvloader:
+            batch_size = len(data[0])  # last sample can have different items
+
+            inputs, labels = data[0].to(device), data[1].to(device)
+            outputs = model(inputs)
+
+            batch_acc = (outputs.argmax(1) == labels).sum()
+            batch_loss = criterion(outputs, labels) * batch_size
+
+            cv_acc += batch_acc
+            cv_loss += batch_loss
+
+        cv_acc = (cv_acc / samples_no).to(CPU_DEVICE)
+        cv_loss = (cv_loss / samples_no).to(CPU_DEVICE)
+
+        writer.add_scalar("Loss/cv", cv_loss, step)
+        writer.add_scalar("Acc/cv", cv_acc, step)
+
+        model = model.train()
