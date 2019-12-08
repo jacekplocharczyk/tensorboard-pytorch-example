@@ -11,7 +11,7 @@ def main():
     epochs = config.DEFAULT_EPOCHS_COUNT
     lr = config.LEARNING_RATE
 
-    writer = tensorboard_logs.TensorboardWriter(device, lr, epochs)
+    writer = tensorboard_logs.TensorboardWriter(device, lr)
 
     trainloader, testloader, cvloader = data_loader.get_dataloaders()
     writer.add_image_sample(trainloader)
@@ -37,4 +37,5 @@ def main():
 if __name__ == "__main__":
     # TODO: add data augmentation
     # TODO: add autoencoder to reduce dimension (rather different project)
+    # TODO: add docstring at the top
     main()

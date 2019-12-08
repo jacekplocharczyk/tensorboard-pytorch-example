@@ -35,6 +35,7 @@ def training_loop(
 
     # TODO: add tests?
     # TODO: add more metrics (cv test, cv loss, per class error rate)
+    # TODO: Change this to the class?
 
     step = 0
     for epoch in range(epochs):  # loop over the dataset multiple times

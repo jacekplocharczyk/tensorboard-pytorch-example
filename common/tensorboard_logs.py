@@ -9,19 +9,18 @@ from common.config import TENSORBOARD_DIR
 
 
 class TensorboardWriter(SummaryWriter):
-    def __init__(self, device: torch.device, lr: float, ep: int, comment: str = ""):
-        log_dir = self.get_log_dir(device, lr, ep, comment)
+    def __init__(self, device: torch.device, lr: float, comment: str = ""):
+        log_dir = self.get_log_dir(device, lr, comment)
         super().__init__(log_dir=log_dir)
 
     @staticmethod
-    def get_log_dir(device: torch.device, lr: float, ep: int, comment: str) -> Path:
+    def get_log_dir(device: torch.device, lr: float, comment: str) -> Path:
         """
         Get tensorboard log dir based on params
 
         Arguments:
             device {torch.device} -- GPU or CPU device
             lr {float} -- learning rate
-            ep {int} -- epochs number
             comment {str} -- user comment
 
         Returns:
@@ -29,7 +28,7 @@ class TensorboardWriter(SummaryWriter):
         """
 
         dev_str = str(device).split(":")[0]
-        tensorboard_suffix = f"_dev{dev_str}_lr{lr}_ep{ep}" + comment
+        tensorboard_suffix = f"_dev{dev_str}_lr{lr}" + comment
         current_time = datetime.datetime.now().strftime("%b%d_%H-%M-%S")
         log_dir = TENSORBOARD_DIR / (current_time + "_" + tensorboard_suffix)
         return log_dir
