@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Union
 
 import torch
 from torchvision import datasets, transforms
@@ -7,21 +7,22 @@ from common import config
 
 
 def get_dataloaders(
-    batch_size: int = config.BATCH_SIZE
+    batch_size: int = config.BATCH_SIZE, transforms_: Union[None, list] = None
 ) -> Tuple[torch.utils.data.DataLoader, ...]:
     """
     Get dataloaders with MNIST train, test, and cross validation data sets.
 
     Keyword Arguments:
         batch_size {int} -- (default: {config.BATCH_SIZE})
+        transforms_ {Union[None, list]} -- list of torch transforms (default: None)
 
     Returns:
         Tuple[torch.utils.data.DataLoader, ...] -- Train, test, and cross-validation
     """
+    if transforms_ is None:
+        transforms_ = [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
 
-    transform = transforms.Compose(
-        [transforms.ToTensor(), transforms.Normalize((0.5,), (0.5,))]
-    )
+    transform = transforms.Compose(transforms_)
 
     dataset = datasets.MNIST(
         config.DATA_DIR / "mnist_train", train=True, download=True, transform=transform
