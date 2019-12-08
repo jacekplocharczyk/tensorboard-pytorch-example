@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from common.config import CPU_DEVICE, DEFAULT_EPOCHS_COUNT, DEVICE
 
 
-class Trainer:
+class ClassificationTrainer:
     def __init__(
         self,
         trainloader: torch.utils.data.DataLoader,
@@ -41,6 +41,7 @@ class Trainer:
         self.device = device
         self.train_stats_frequency = train_stats_frequency
         self.step = 0
+        self._first_run = True
 
     def __call__(self, *args, **kwargs):
         return self._training_loop(*args, **kwargs)
@@ -66,6 +67,7 @@ class Trainer:
                 model = self._optimizer_step(model, optimizer, batch)
 
             self.update_cv_stats(model)
+            self._first_run = False
 
         return model
 
@@ -125,23 +127,30 @@ class Trainer:
             model {torch.nn} -- model to learn
 
         """
-        cv_acc, cv_loss = self._get_cv_stats(model)
+        cv_acc, cv_loss, outputs_dist, targets_dist = self._get_cv_stats(model)
         self.writer.add_scalar("Loss/cv", cv_loss, self.step)
         self.writer.add_scalar("Acc/cv", cv_acc, self.step)
+        self.writer.add_histogram("Outputs/cv", outputs_dist, self.step)
+        if self._first_run:
+            self.writer.add_histogram("Outputs/cv", targets_dist, 0)
 
-    def _get_cv_stats(self, model: torch.nn) -> Tuple[torch.tensor, torch.tensor]:
+    def _get_cv_stats(self, model: torch.nn) -> Tuple[torch.tensor, ...]:
         """
-        Collect CV data accuracy and loss.
+        Collect CV data accuracy, loss, prediction distribution, and targets
+        distribution.
 
         Arguments:
             model {torch.nn} -- model to learn
 
         Returns:
-            Tuple[torch.tensor, torch.tensor] -- accuracy and loss
+            Tuple[torch.tensor * 4] -- accuracy, loss, prediction distribution, and
+                targets distribution.
         """
         cv_acc = torch.tensor(0.0).to(self.device)
         cv_loss = torch.tensor(0.0).to(self.device)
         samples_no = float(len(self.cvloader.dataset))
+        outputs_dist = None
+        targets_dist = None
 
         with torch.no_grad():
             model = model.eval()
@@ -152,11 +161,20 @@ class Trainer:
                 targets = targets.to(self.device)
                 outputs = model(inputs.to(self.device))
 
+                if outputs_dist is None and targets_dist is None:
+                    outputs_dist = outputs.argmax(1).long()
+                    targets_dist = targets.long()
+                else:
+                    outputs_dist = torch.cat([outputs_dist, outputs.argmax(1).long()])
+                    targets_dist = torch.cat([targets_dist, targets.long()])
+
                 cv_acc += (outputs.argmax(1) == targets).sum()
                 cv_loss += self.criterion(outputs, targets) * batch_size
 
             cv_acc = (cv_acc / samples_no).to(CPU_DEVICE)
             cv_loss = (cv_loss / samples_no).to(CPU_DEVICE)
+            outputs_dist = outputs_dist.to(CPU_DEVICE)
+            targets_dist = targets_dist.to(CPU_DEVICE)
 
         model = model.train()
-        return cv_acc, cv_loss
+        return cv_acc, cv_loss, outputs_dist, targets_dist

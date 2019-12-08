@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from common import config, data_loader, tensorboard_logs
 from common.default_convnet import ConvNet
-from common.training_loop import Trainer
+from common.trainer import ClassificationTrainer
 
 
 def main():
@@ -16,10 +16,12 @@ def main():
     trainloader, testloader, cvloader = data_loader.get_dataloaders()
     writer.add_image_sample(trainloader)
 
-    net = ConvNet().to(device)
+    net = ConvNet(outputs=10).to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=lr)
-    trainer = Trainer(trainloader, cvloader, criterion, writer, epochs, device)
+    trainer = ClassificationTrainer(
+        trainloader, cvloader, criterion, writer, epochs, device
+    )
 
     net = trainer(net, optimizer)
 

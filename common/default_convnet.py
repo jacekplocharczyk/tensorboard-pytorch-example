@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class ConvNet(nn.Module):
-    def __init__(self):
+    def __init__(self, outputs: int):
         super().__init__()
         self.dropout = nn.Dropout(0.1)
         self.conv1 = nn.Conv2d(1, 6, 3, stride=1, padding=1)
@@ -11,7 +11,7 @@ class ConvNet(nn.Module):
         self.conv2 = nn.Conv2d(6, 12, 3, stride=1, padding=1)
         self.fc1 = nn.Linear(12 * 7 * 7, 64)
         self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 10)
+        self.fc3 = nn.Linear(32, outputs)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))  # output 6x28x28
