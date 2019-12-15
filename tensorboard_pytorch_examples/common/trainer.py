@@ -4,7 +4,11 @@ import torch
 from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 
-from common.config import CPU_DEVICE, DEFAULT_EPOCHS_COUNT, DEVICE
+from tensorboard_pytorch_examples.common.config import (
+    CPU_DEVICE,
+    DEFAULT_EPOCHS_COUNT,
+    DEVICE,
+)
 
 
 class ClassificationTrainer:

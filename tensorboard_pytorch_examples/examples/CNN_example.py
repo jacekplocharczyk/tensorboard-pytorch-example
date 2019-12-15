@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 
-from common import config, data_loader, tensorboard_logs
-from common.default_convnet import ConvNet
-from common.trainer import ClassificationTrainer
+from tensorboard_pytorch_examples.common import config, data_loader, tensorboard_logs
+from tensorboard_pytorch_examples.common.default_convnet import ConvNet
+from tensorboard_pytorch_examples.common.trainer import ClassificationTrainer
 
 
 def main():

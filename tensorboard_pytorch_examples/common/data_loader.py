@@ -3,7 +3,7 @@ from typing import Tuple, Union
 import torch
 from torchvision import datasets, transforms
 
-from common import config
+from tensorboard_pytorch_examples.common import config
 
 
 def get_dataloaders(

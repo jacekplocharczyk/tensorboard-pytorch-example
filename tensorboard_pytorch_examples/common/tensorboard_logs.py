@@ -5,7 +5,7 @@ import torch
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
 
-from common.config import TENSORBOARD_DIR
+from tensorboard_pytorch_examples.common.config import TENSORBOARD_DIR
 
 
 class TensorboardWriter(SummaryWriter):

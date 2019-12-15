@@ -1,7 +1,7 @@
 import pytest
 from torchvision import datasets, transforms
 
-from common import config, data_loader
+from tensorboard_pytorch_examples.common import config, data_loader
 
 
 @pytest.fixture
